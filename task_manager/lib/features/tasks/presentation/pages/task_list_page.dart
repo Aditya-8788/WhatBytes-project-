@@ -14,7 +14,7 @@ import '../bloc/task_filter.dart';
 import '../bloc/task_state.dart';
 import '../widgets/filter_sheet.dart';
 import '../widgets/task_card.dart';
-import '../widgets/task_form_sheet.dart';
+import 'add_edit_task_page.dart';
 
 class TaskListPage extends StatefulWidget {
   final String userId;
@@ -43,22 +43,13 @@ class _TaskListPageState extends State<TaskListPage> {
     super.dispose();
   }
 
-  void _showTaskSheet({TaskEntity? task}) {
+  void _openAddEditTask({TaskEntity? task}) {
     final bloc = context.read<TaskBloc>();
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (_) => BlocProvider<TaskBloc>.value(
-        value: bloc,
-        child: TaskFormSheet(
-          initialTask: task,
-          onSave: (value) {
-            bloc.add(task == null ? AddTask(task: value) : EditTask(task: value));
-          },
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => BlocProvider<TaskBloc>.value(
+          value: bloc,
+          child: AddEditTaskPage(initialTask: task),
         ),
       ),
     );
@@ -229,6 +220,8 @@ class _TaskListPageState extends State<TaskListPage> {
           TasksInitial() => const SizedBox.shrink(),
           TasksLoading() => const Center(child: CircularProgressIndicator()),
           TasksError() => _buildError(state.message),
+          TaskSaveSuccess() => const SizedBox.shrink(),
+          TaskOperationFailure() => const SizedBox.shrink(),
           TasksLoaded() => _buildLoaded(state),
         };
       },
@@ -313,7 +306,7 @@ class _TaskListPageState extends State<TaskListPage> {
                         isCompleted: task.isCompleted,
                       ),
                     ),
-                onTap: () => _showTaskSheet(task: task),
+                onTap: () => _openAddEditTask(task: task),
               ),
             ),
           const SizedBox(height: 12),
@@ -425,15 +418,27 @@ class _TaskListPageState extends State<TaskListPage> {
           (route) => false,
         );
       },
-      child: Scaffold(
-        appBar: _buildAppBar(),
-        body: _buildBody(),
-        floatingActionButton: FloatingActionButton(
-          onPressed: _showTaskSheet,
-          backgroundColor: AppColors.primary,
-          foregroundColor: Colors.white,
-          elevation: 2,
-          child: const Icon(Icons.add),
+      child: BlocListener<TaskBloc, TasksState>(
+        listenWhen: (previous, current) => current is TaskOperationFailure,
+        listener: (context, state) {
+          final failure = state as TaskOperationFailure;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(failure.message),
+              backgroundColor: AppColors.error,
+            ),
+          );
+        },
+        child: Scaffold(
+          appBar: _buildAppBar(),
+          body: _buildBody(),
+          floatingActionButton: FloatingActionButton(
+            onPressed: () => _openAddEditTask(),
+            backgroundColor: AppColors.primary,
+            foregroundColor: Colors.white,
+            elevation: 2,
+            child: const Icon(Icons.add),
+          ),
         ),
       ),
     );

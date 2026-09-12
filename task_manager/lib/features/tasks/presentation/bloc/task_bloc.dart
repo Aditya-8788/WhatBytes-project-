@@ -37,6 +37,7 @@ class TaskBloc extends Bloc<TaskEvent, TasksState> {
   String? _userId;
   StreamSubscription<List<TaskEntity>>? _tasksSubscription;
   List<TaskEntity> _allTasks = const [];
+  TasksLoaded? _lastLoaded;
   TaskPriorityFilter _priorityFilter = TaskPriorityFilter.all;
   TaskStatusFilter _statusFilter = TaskStatusFilter.all;
 
@@ -59,12 +60,13 @@ class TaskBloc extends Bloc<TaskEvent, TasksState> {
     ).listen(
       (tasks) {
         _allTasks = List.unmodifiable(tasks);
-        emit(TasksLoaded(
+        _lastLoaded = TasksLoaded(
           allTasks: _allTasks,
           filteredTasks: _applyFilters(_allTasks),
           priorityFilter: _priorityFilter,
           statusFilter: _statusFilter,
-        ));
+        );
+        emit(_lastLoaded!);
       },
       onError: (Object error) {
         emit(const TasksError('Failed to load tasks. Please try again.'));
@@ -81,8 +83,8 @@ class TaskBloc extends Bloc<TaskEvent, TasksState> {
       CreateTaskParams(task: event.task, userId: userId),
     );
     result.fold(
-      (failure) => emit(TasksError(failure.message)),
-      (_) {},
+      (failure) => _emitFailure(emit, failure.message),
+      (_) => _emitSaveSuccess(emit, isEdit: false),
     );
   }
 
@@ -95,8 +97,8 @@ class TaskBloc extends Bloc<TaskEvent, TasksState> {
       UpdateTaskParams(task: event.task, userId: userId),
     );
     result.fold(
-      (failure) => emit(TasksError(failure.message)),
-      (_) {},
+      (failure) => _emitFailure(emit, failure.message),
+      (_) => _emitSaveSuccess(emit, isEdit: true),
     );
   }
 
@@ -112,7 +114,7 @@ class TaskBloc extends Bloc<TaskEvent, TasksState> {
       DeleteTaskParams(taskId: event.taskId, userId: userId),
     );
     result.fold(
-      (failure) => emit(TasksError(failure.message)),
+      (failure) => _emitFailure(emit, failure.message),
       (_) {},
     );
   }
@@ -133,9 +135,25 @@ class TaskBloc extends Bloc<TaskEvent, TasksState> {
       ),
     );
     result.fold(
-      (failure) => emit(TasksError(failure.message)),
+      (failure) => _emitFailure(emit, failure.message),
       (_) {},
     );
+  }
+
+  void _emitSaveSuccess(Emitter<TasksState> emit, {required bool isEdit}) {
+    emit(TaskSaveSuccess(isEdit: isEdit));
+    final last = _lastLoaded;
+    if (last != null) {
+      emit(last);
+    }
+  }
+
+  void _emitFailure(Emitter<TasksState> emit, String message) {
+    emit(TaskOperationFailure(message));
+    final last = _lastLoaded;
+    if (last != null) {
+      emit(last);
+    }
   }
 
   void _onFilterChanged(FilterChanged event, Emitter<TasksState> emit) {
@@ -144,11 +162,13 @@ class TaskBloc extends Bloc<TaskEvent, TasksState> {
 
     final current = state;
     if (current is TasksLoaded) {
-      emit(current.copyWith(
+      final updated = current.copyWith(
         filteredTasks: _applyFilters(current.allTasks),
         priorityFilter: _priorityFilter,
         statusFilter: _statusFilter,
-      ));
+      );
+      _lastLoaded = updated;
+      emit(updated);
     }
   }
 

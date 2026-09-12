@@ -62,3 +62,21 @@ class TasksError extends TasksState {
   @override
   List<Object?> get props => [message];
 }
+
+class TaskSaveSuccess extends TasksState {
+  final bool isEdit;
+
+  const TaskSaveSuccess({required this.isEdit});
+
+  @override
+  List<Object?> get props => [isEdit];
+}
+
+class TaskOperationFailure extends TasksState {
+  final String message;
+
+  const TaskOperationFailure(this.message);
+
+  @override
+  List<Object?> get props => [message];
+}
