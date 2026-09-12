@@ -16,6 +16,7 @@ import '../../features/tasks/domain/usecases/create_task_usecase.dart';
 import '../../features/tasks/domain/usecases/delete_task_usecase.dart';
 import '../../features/tasks/domain/usecases/get_tasks_usecase.dart';
 import '../../features/tasks/domain/usecases/toggle_complete_usecase.dart';
+import '../../features/tasks/presentation/bloc/task_bloc.dart';
 import '../../features/tasks/domain/usecases/update_task_usecase.dart';
 
 final GetIt sl = GetIt.instance;
@@ -69,6 +70,15 @@ class ServiceLocator {
       )
       ..registerLazySingleton<GetTasksUseCase>(
         () => GetTasksUseCase(sl<TaskRepository>()),
+      )
+      ..registerFactory<TaskBloc>(
+        () => TaskBloc(
+          getTasksUseCase: sl<GetTasksUseCase>(),
+          createTaskUseCase: sl<CreateTaskUseCase>(),
+          updateTaskUseCase: sl<UpdateTaskUseCase>(),
+          deleteTaskUseCase: sl<DeleteTaskUseCase>(),
+          toggleCompleteUseCase: sl<ToggleCompleteUseCase>(),
+        ),
       );
   }
 }
