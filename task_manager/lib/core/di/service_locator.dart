@@ -5,6 +5,7 @@ import 'package:get_it/get_it.dart';
 import '../../features/auth/data/datasources/auth_remote_data_source.dart';
 import '../../features/auth/data/repositories/auth_repository_impl.dart';
 import '../../features/auth/domain/repositories/auth_repository.dart';
+import '../../features/auth/domain/usecases/get_current_user_usecase.dart';
 import '../../features/auth/domain/usecases/sign_in_usecase.dart';
 import '../../features/auth/domain/usecases/sign_out_usecase.dart';
 import '../../features/auth/domain/usecases/sign_up_usecase.dart';
@@ -43,11 +44,15 @@ class ServiceLocator {
       ..registerLazySingleton<SignOutUseCase>(
         () => SignOutUseCase(sl<AuthRepository>()),
       )
+      ..registerLazySingleton<GetCurrentUserUseCase>(
+        () => GetCurrentUserUseCase(sl<AuthRepository>()),
+      )
       ..registerFactory<AuthBloc>(
         () => AuthBloc(
           signInUseCase: sl<SignInUseCase>(),
           signUpUseCase: sl<SignUpUseCase>(),
           signOutUseCase: sl<SignOutUseCase>(),
+          getCurrentUserUseCase: sl<GetCurrentUserUseCase>(),
         ),
       )
       ..registerLazySingleton<TaskRemoteDataSource>(

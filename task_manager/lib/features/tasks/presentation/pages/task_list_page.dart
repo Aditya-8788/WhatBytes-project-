@@ -3,10 +3,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../core/theme/app_theme.dart';
-import '../../../../core/utils/app_routes.dart';
 import '../../../auth/presentation/bloc/auth_bloc.dart';
 import '../../../auth/presentation/bloc/auth_event.dart';
-import '../../../auth/presentation/bloc/auth_state.dart';
 import '../../domain/entities/task.dart';
 import '../bloc/task_bloc.dart';
 import '../bloc/task_event.dart';
@@ -409,36 +407,26 @@ class _TaskListPageState extends State<TaskListPage> {
 
   @override
   Widget build(BuildContext context) {
-    return BlocListener<AuthBloc, AuthState>(
-      listenWhen: (previous, current) =>
-          previous is AuthLoading && current is AuthInitial,
+    return BlocListener<TaskBloc, TasksState>(
+      listenWhen: (previous, current) => current is TaskOperationFailure,
       listener: (context, state) {
-        Navigator.of(context).pushNamedAndRemoveUntil(
-          AppRoutes.login,
-          (route) => false,
+        final failure = state as TaskOperationFailure;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(failure.message),
+            backgroundColor: AppColors.error,
+          ),
         );
       },
-      child: BlocListener<TaskBloc, TasksState>(
-        listenWhen: (previous, current) => current is TaskOperationFailure,
-        listener: (context, state) {
-          final failure = state as TaskOperationFailure;
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(failure.message),
-              backgroundColor: AppColors.error,
-            ),
-          );
-        },
-        child: Scaffold(
-          appBar: _buildAppBar(),
-          body: _buildBody(),
-          floatingActionButton: FloatingActionButton(
-            onPressed: () => _openAddEditTask(),
-            backgroundColor: AppColors.primary,
-            foregroundColor: Colors.white,
-            elevation: 2,
-            child: const Icon(Icons.add),
-          ),
+      child: Scaffold(
+        appBar: _buildAppBar(),
+        body: _buildBody(),
+        floatingActionButton: FloatingActionButton(
+          onPressed: () => _openAddEditTask(),
+          backgroundColor: AppColors.primary,
+          foregroundColor: Colors.white,
+          elevation: 2,
+          child: const Icon(Icons.add),
         ),
       ),
     );
