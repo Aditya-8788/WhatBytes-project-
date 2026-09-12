@@ -216,7 +216,7 @@ class _TaskListPageState extends State<TaskListPage> {
       builder: (context, state) {
         return switch (state) {
           TasksInitial() => const SizedBox.shrink(),
-          TasksLoading() => const Center(child: CircularProgressIndicator()),
+          TasksLoading() => const _TaskLoadingPlaceholder(),
           TasksError() => _buildError(state.message),
           TaskSaveSuccess() => const SizedBox.shrink(),
           TaskOperationFailure() => const SizedBox.shrink(),
@@ -239,77 +239,234 @@ class _TaskListPageState extends State<TaskListPage> {
               .toList();
 
     if (state.allTasks.isEmpty) {
-      return _buildEmpty(hasFilters: false);
+      return _buildEmpty(
+        icon: Icons.task_alt,
+        title: 'No tasks yet',
+        subtitle: 'Tap + to add your first task',
+        actionLabel: 'Add Task',
+        onAction: () => _openAddEditTask(),
+      );
     }
     if (visible.isEmpty) {
-      return _buildEmpty(hasFilters: true);
+      if (query.isNotEmpty) {
+        return _buildEmpty(
+          icon: Icons.search_off,
+          title: 'No results for "$query"',
+          subtitle: 'Try a different search term',
+          actionLabel: 'Clear Search',
+          actionIcon: Icons.close,
+          onAction: _closeSearch,
+        );
+      }
+      return _buildEmpty(
+        icon: Icons.filter_alt_off_outlined,
+        title: 'No matching tasks',
+        subtitle: 'Try adjusting your filters',
+        actionLabel: 'Clear Filters',
+        actionIcon: Icons.filter_alt_off_outlined,
+        onAction: () => context.read<TaskBloc>().add(
+              const FilterChanged(
+                priority: TaskPriorityFilter.all,
+                status: TaskStatusFilter.all,
+              ),
+            ),
+      );
     }
 
     final sections = _groupTasks(visible);
 
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
-      children: [
-        _buildHeader(),
-        const SizedBox(height: 24),
-        for (final section in sections) ...[
-          Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text(
-                  section.title,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.textPrimary,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final columns = constraints.maxWidth >= 1100
+            ? 3
+            : constraints.maxWidth >= 700
+                ? 2
+                : 1;
+        final useGrid = columns > 1;
+        final horizontalPadding = constraints.maxWidth >= 600 ? 32.0 : 16.0;
+        final spacing = 14.0;
+        final contentWidth =
+            constraints.maxWidth - horizontalPadding * 2 - spacing;
+        final cardWidth = !useGrid
+            ? double.infinity
+            : (contentWidth - spacing * (columns - 1)) / columns;
+
+        return ListView(
+          padding: EdgeInsets.fromLTRB(
+            horizontalPadding,
+            16,
+            horizontalPadding,
+            100,
+          ),
+          children: [
+            _buildHeader(),
+            const SizedBox(height: 24),
+            for (final section in sections) ...[
+              _buildSectionHeader(
+                title: section.title,
+                count: section.tasks.length,
+              ),
+              if (useGrid)
+                Wrap(
+                  spacing: spacing,
+                  runSpacing: spacing,
+                  children: [
+                    for (final task in section.tasks)
+                      SizedBox(
+                        width: cardWidth,
+                        child: _buildDismissible(task),
                       ),
+                  ],
+                )
+              else
+                for (final task in section.tasks) _buildDismissible(task),
+              const SizedBox(height: 12),
+            ],
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildSectionHeader({required String title, required int count}) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          Text(
+            title,
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textPrimary,
                 ),
-                const SizedBox(width: 8),
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 1),
-                  child: Text(
-                    '${section.tasks.length}',
-                    style: const TextStyle(
-                      fontSize: 13,
-                      color: AppColors.textSecondary,
-                    ),
-                  ),
-                ),
-              ],
+          ),
+          const SizedBox(width: 8),
+          Padding(
+            padding: const EdgeInsets.only(bottom: 1),
+            child: Text(
+              '$count',
+              style: const TextStyle(
+                fontSize: 13,
+                color: AppColors.textSecondary,
+              ),
             ),
           ),
-          for (final task in section.tasks)
-            Dismissible(
-              key: ValueKey('task-${task.id}'),
-              direction: DismissDirection.endToStart,
-              background: Container(
-                margin: const EdgeInsets.only(bottom: 12),
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                alignment: Alignment.centerRight,
-                decoration: BoxDecoration(
-                  color: AppColors.error,
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: const Icon(Icons.delete_outline, color: Colors.white),
-              ),
-              onDismissed: (_) => context
-                  .read<TaskBloc>()
-                  .add(DeleteTask(taskId: task.id)),
-              child: TaskCard(
-                task: task,
-                onToggle: () => context.read<TaskBloc>().add(
-                      ToggleTaskComplete(
-                        taskId: task.id,
-                        isCompleted: task.isCompleted,
-                      ),
-                    ),
-                onTap: () => _openAddEditTask(task: task),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDismissible(TaskEntity task) {
+    return Dismissible(
+      key: ValueKey('task-${task.id}'),
+      direction: DismissDirection.endToStart,
+      confirmDismiss: (_) => _confirmDelete(task),
+      onDismissed: (_) =>
+          context.read<TaskBloc>().add(DeleteTask(taskId: task.id)),
+      background: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        alignment: Alignment.centerRight,
+        decoration: BoxDecoration(
+          color: AppColors.error,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: const Icon(Icons.delete_outline, color: Colors.white),
+      ),
+      child: TaskCard(
+        task: task,
+        onToggle: () => context.read<TaskBloc>().add(
+              ToggleTaskComplete(
+                taskId: task.id,
+                isCompleted: task.isCompleted,
               ),
             ),
-          const SizedBox(height: 12),
+        onTap: () => _openAddEditTask(task: task),
+      ),
+    );
+  }
+
+  Future<bool> _confirmDelete(TaskEntity task) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete task?'),
+        content: Text(
+          'Are you sure you want to delete "${task.title}"? '
+          'This action cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: AppColors.error,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Delete'),
+          ),
         ],
-      ],
+      ),
+    );
+    return confirmed ?? false;
+  }
+
+  Widget _buildEmpty({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    String? actionLabel,
+    IconData actionIcon = Icons.add,
+    VoidCallback? onAction,
+  }) {
+    return Center(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(32),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 420),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 72,
+                height: 72,
+                decoration: const BoxDecoration(
+                  color: AppColors.primarySoft,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(icon, size: 36, color: AppColors.primary),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                title,
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.textPrimary,
+                    ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                subtitle,
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: AppColors.textSecondary),
+              ),
+              if (actionLabel != null && onAction != null) ...[
+                const SizedBox(height: 20),
+                ElevatedButton.icon(
+                  onPressed: onAction,
+                  icon: Icon(actionIcon, size: 18),
+                  label: Text(actionLabel),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
     );
   }
 
@@ -332,44 +489,6 @@ class _TaskListPageState extends State<TaskListPage> {
               ),
         ),
       ],
-    );
-  }
-
-  Widget _buildEmpty({required bool hasFilters}) {
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 72,
-            height: 72,
-            decoration: const BoxDecoration(
-              color: AppColors.primarySoft,
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(
-              Icons.task_alt,
-              size: 36,
-              color: AppColors.primary,
-            ),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            hasFilters ? 'No matching tasks' : 'No tasks yet',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.textPrimary,
-                ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            hasFilters
-                ? 'Try adjusting your filters or search'
-                : 'Tap + to add your first task',
-            style: const TextStyle(color: AppColors.textSecondary),
-          ),
-        ],
-      ),
     );
   }
 
@@ -428,6 +547,31 @@ class _TaskListPageState extends State<TaskListPage> {
           elevation: 2,
           child: const Icon(Icons.add),
         ),
+      ),
+    );
+  }
+}
+
+class _TaskLoadingPlaceholder extends StatelessWidget {
+  const _TaskLoadingPlaceholder();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          SizedBox(
+            width: 32,
+            height: 32,
+            child: CircularProgressIndicator(strokeWidth: 3),
+          ),
+          SizedBox(height: 16),
+          Text(
+            'Loading your tasks...',
+            style: TextStyle(color: AppColors.textSecondary),
+          ),
+        ],
       ),
     );
   }
