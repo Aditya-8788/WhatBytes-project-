@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -5,7 +6,8 @@ import '../../features/auth/presentation/bloc/auth_bloc.dart';
 import '../../features/auth/presentation/pages/login_page.dart';
 import '../../features/auth/presentation/pages/sign_up_page.dart';
 import '../../features/auth/presentation/pages/splash_page.dart';
-import '../../features/tasks/presentation/pages/tasks_page.dart';
+import '../../features/tasks/presentation/bloc/task_bloc.dart';
+import '../../features/tasks/presentation/pages/task_list_page.dart';
 import '../di/service_locator.dart';
 
 abstract final class AppRoutes {
@@ -24,6 +26,14 @@ abstract final class AppRoutes {
           create: (_) => sl<AuthBloc>(),
           child: const SignUpPage(),
         ),
-    tasks: (_) => const TasksPage(),
+    tasks: (_) => MultiBlocProvider(
+          providers: [
+            BlocProvider<TaskBloc>(create: (_) => sl<TaskBloc>()),
+            BlocProvider<AuthBloc>(create: (_) => sl<AuthBloc>()),
+          ],
+          child: TaskListPage(
+            userId: FirebaseAuth.instance.currentUser?.uid ?? '',
+          ),
+        ),
   };
 }
