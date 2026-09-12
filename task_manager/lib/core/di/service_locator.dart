@@ -9,6 +9,14 @@ import '../../features/auth/domain/usecases/sign_in_usecase.dart';
 import '../../features/auth/domain/usecases/sign_out_usecase.dart';
 import '../../features/auth/domain/usecases/sign_up_usecase.dart';
 import '../../features/auth/presentation/bloc/auth_bloc.dart';
+import '../../features/tasks/data/datasources/task_remote_data_source.dart';
+import '../../features/tasks/data/repositories/task_repository_impl.dart';
+import '../../features/tasks/domain/repositories/task_repository.dart';
+import '../../features/tasks/domain/usecases/create_task_usecase.dart';
+import '../../features/tasks/domain/usecases/delete_task_usecase.dart';
+import '../../features/tasks/domain/usecases/get_tasks_usecase.dart';
+import '../../features/tasks/domain/usecases/toggle_complete_usecase.dart';
+import '../../features/tasks/domain/usecases/update_task_usecase.dart';
 
 final GetIt sl = GetIt.instance;
 
@@ -40,6 +48,27 @@ class ServiceLocator {
           signUpUseCase: sl<SignUpUseCase>(),
           signOutUseCase: sl<SignOutUseCase>(),
         ),
+      )
+      ..registerLazySingleton<TaskRemoteDataSource>(
+        () => TaskRemoteDataSource(sl<FirebaseFirestore>()),
+      )
+      ..registerLazySingleton<TaskRepository>(
+        () => TaskRepositoryImpl(sl<TaskRemoteDataSource>()),
+      )
+      ..registerLazySingleton<CreateTaskUseCase>(
+        () => CreateTaskUseCase(sl<TaskRepository>()),
+      )
+      ..registerLazySingleton<UpdateTaskUseCase>(
+        () => UpdateTaskUseCase(sl<TaskRepository>()),
+      )
+      ..registerLazySingleton<DeleteTaskUseCase>(
+        () => DeleteTaskUseCase(sl<TaskRepository>()),
+      )
+      ..registerLazySingleton<ToggleCompleteUseCase>(
+        () => ToggleCompleteUseCase(sl<TaskRepository>()),
+      )
+      ..registerLazySingleton<GetTasksUseCase>(
+        () => GetTasksUseCase(sl<TaskRepository>()),
       );
   }
 }
