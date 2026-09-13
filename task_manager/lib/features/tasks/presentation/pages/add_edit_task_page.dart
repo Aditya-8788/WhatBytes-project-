@@ -90,7 +90,7 @@ class _AddEditTaskPageState extends State<AddEditTaskPage> {
           ),
           body: SafeArea(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
               child: Form(
                 key: _formKey,
                 child: Column(
@@ -126,7 +126,7 @@ class _AddEditTaskPageState extends State<AddEditTaskPage> {
                     ),
                     const SizedBox(height: 16),
                     Material(
-                      color: const Color(0xFFF4F1FB),
+                      color: AppColors.primarySoft,
                       borderRadius: BorderRadius.circular(14),
                       child: InkWell(
                         borderRadius: BorderRadius.circular(14),

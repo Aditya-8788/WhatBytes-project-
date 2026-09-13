@@ -52,7 +52,7 @@ class _FilterSheetState extends State<FilterSheet> {
               width: 40,
               height: 4,
               decoration: BoxDecoration(
-                color: const Color(0xFFE2E8F0),
+                color: AppColors.textSecondary.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -186,7 +186,7 @@ class _ChoiceChip<T> extends StatelessWidget {
         fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
       ),
       side: BorderSide(
-        color: isSelected ? AppColors.primary : const Color(0xFFE2E8F0),
+        color: isSelected ? AppColors.primary : AppColors.primarySoft,
       ),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       onSelected: (_) => onSelected(value),

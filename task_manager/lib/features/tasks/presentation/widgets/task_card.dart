@@ -19,6 +19,7 @@ class TaskCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final completed = task.isCompleted;
+    final priorityColor = priorityColorFor(task.priority);
 
     void handleToggle() {
       debugPrint('[TaskCard] checkbox onTap fired for taskId="${task.id}"');
@@ -29,6 +30,9 @@ class TaskCard extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(16),
+        border: Border(
+          left: BorderSide(color: priorityColor, width: 4),
+        ),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.05),
@@ -43,14 +47,19 @@ class TaskCard extends StatelessWidget {
         clipBehavior: Clip.antiAlias,
         child: InkWell(
           onTap: onTap,
-          child: Padding(
+          child: Opacity(
+            opacity: completed ? 0.6 : 1.0,
+            child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             child: Row(
               children: [
                 GestureDetector(
                   behavior: HitTestBehavior.opaque,
                   onTap: handleToggle,
-                  child: _CheckCircle(isCompleted: completed),
+                  child: _CheckCircle(
+                    isCompleted: completed,
+                    fillColor: priorityColor,
+                  ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -99,6 +108,7 @@ class TaskCard extends StatelessWidget {
                 PriorityChip(priority: task.priority),
               ],
             ),
+            ),
           ),
         ),
       ),
@@ -108,8 +118,12 @@ class TaskCard extends StatelessWidget {
 
 class _CheckCircle extends StatelessWidget {
   final bool isCompleted;
+  final Color fillColor;
 
-  const _CheckCircle({required this.isCompleted});
+  const _CheckCircle({
+    required this.isCompleted,
+    required this.fillColor,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -118,11 +132,20 @@ class _CheckCircle extends StatelessWidget {
       height: 24,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        color: isCompleted ? AppColors.success : Colors.white,
+        color: isCompleted ? fillColor : Colors.white,
         border: Border.all(
-          color: isCompleted ? AppColors.success : AppColors.textSecondary,
+          color: isCompleted ? fillColor : AppColors.textSecondary,
           width: 2,
         ),
+        boxShadow: isCompleted
+            ? [
+                BoxShadow(
+                  color: fillColor.withValues(alpha: 0.4),
+                  blurRadius: 6,
+                  offset: const Offset(0, 2),
+                ),
+              ]
+            : null,
       ),
       child: isCompleted
           ? const Icon(Icons.check, size: 15, color: Colors.white)
@@ -136,28 +159,30 @@ class PriorityChip extends StatelessWidget {
 
   const PriorityChip({super.key, required this.priority});
 
-  Color get _color => switch (priority) {
-        TaskPriority.low => AppColors.success,
-        TaskPriority.medium => AppColors.warning,
-        TaskPriority.high => AppColors.error,
-      };
-
   @override
   Widget build(BuildContext context) {
+    final color = priorityColorFor(priority);
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: _color.withValues(alpha: 0.12),
+        color: color,
         borderRadius: BorderRadius.circular(10),
       ),
       child: Text(
         priority.name.toUpperCase(),
-        style: TextStyle(
-          color: _color,
+        style: const TextStyle(
+          color: Colors.white,
           fontSize: 11,
           fontWeight: FontWeight.w700,
+          letterSpacing: 0.3,
         ),
       ),
     );
   }
 }
+
+Color priorityColorFor(TaskPriority priority) => switch (priority) {
+      TaskPriority.low => AppColors.success,
+      TaskPriority.medium => AppColors.warning,
+      TaskPriority.high => AppColors.error,
+    };

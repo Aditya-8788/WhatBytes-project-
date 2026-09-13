@@ -149,8 +149,11 @@ class _TaskListPageState extends State<TaskListPage> {
               autofocus: true,
               textInputAction: TextInputAction.search,
               onChanged: (_) => setState(() {}),
+              style: const TextStyle(color: Colors.white),
+              cursorColor: Colors.white,
               decoration: const InputDecoration(
                 hintText: 'Search tasks',
+                hintStyle: TextStyle(color: Colors.white70),
                 border: InputBorder.none,
                 filled: false,
                 contentPadding: EdgeInsets.zero,
@@ -281,7 +284,7 @@ class _TaskListPageState extends State<TaskListPage> {
                 : 1;
         final useGrid = columns > 1;
         final horizontalPadding = constraints.maxWidth >= 600 ? 32.0 : 16.0;
-        final spacing = 14.0;
+        final spacing = 16.0;
         final contentWidth =
             constraints.maxWidth - horizontalPadding * 2 - spacing;
         final cardWidth = !useGrid
@@ -327,13 +330,21 @@ class _TaskListPageState extends State<TaskListPage> {
 
   Widget _buildSectionHeader({required String title, required int count}) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.only(bottom: 16),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.end,
         children: [
+          Container(
+            width: 4,
+            height: 20,
+            decoration: BoxDecoration(
+              color: AppColors.primary,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          const SizedBox(width: 10),
           Text(
             title,
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
                   fontWeight: FontWeight.w700,
                   color: AppColors.textPrimary,
                 ),
@@ -344,7 +355,7 @@ class _TaskListPageState extends State<TaskListPage> {
             child: Text(
               '$count',
               style: const TextStyle(
-                fontSize: 13,
+                fontSize: 14,
                 color: AppColors.textSecondary,
               ),
             ),
@@ -545,9 +556,6 @@ class _TaskListPageState extends State<TaskListPage> {
         body: _buildBody(),
         floatingActionButton: FloatingActionButton(
           onPressed: () => _openAddEditTask(),
-          backgroundColor: AppColors.primary,
-          foregroundColor: Colors.white,
-          elevation: 2,
           child: const Icon(Icons.add),
         ),
       ),
@@ -565,9 +573,28 @@ class _TaskLoadingPlaceholder extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           SizedBox(
+            width: 88,
+            height: 88,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: AppColors.primarySoft,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.task_alt,
+                size: 44,
+                color: AppColors.primary,
+              ),
+            ),
+          ),
+          SizedBox(height: 20),
+          SizedBox(
             width: 32,
             height: 32,
-            child: CircularProgressIndicator(strokeWidth: 3),
+            child: CircularProgressIndicator(
+              color: AppColors.primary,
+              strokeWidth: 3,
+            ),
           ),
           SizedBox(height: 16),
           Text(
