@@ -42,8 +42,7 @@ class AuthSubmitButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<AuthBloc, AuthState>(
-      buildWhen: (previous, current) =>
-          current is AuthLoading || current is AuthFailure,
+      buildWhen: (previous, current) => current is! AuthSuccess,
       builder: (context, state) {
         if (state is AuthLoading) {
           return const SizedBox(

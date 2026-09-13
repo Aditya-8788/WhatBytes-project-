@@ -1,9 +1,6 @@
-import 'dart:async';
-
 import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-import '../../domain/entities/user.dart';
 import '../../domain/usecases/get_current_user_usecase.dart';
 import '../../domain/usecases/sign_in_usecase.dart';
 import '../../domain/usecases/sign_out_usecase.dart';
@@ -18,8 +15,6 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   final SignOutUseCase signOutUseCase;
   final GetCurrentUserUseCase getCurrentUserUseCase;
 
-  late final StreamSubscription<UserEntity?> _authStateSubscription;
-
   AuthBloc({
     required this.signInUseCase,
     required this.signUpUseCase,
@@ -27,40 +22,15 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     required this.getCurrentUserUseCase,
   }) : super(const AuthChecking()) {
     on<AuthCheckRequested>(_onAuthCheckRequested);
-    on<AuthStateChanged>(_onAuthStateChanged);
     on<SignInRequested>(_onSignInRequested);
     on<SignUpRequested>(_onSignUpRequested);
     on<SignOutRequested>(_onSignOutRequested);
 
-    debugPrint('[AuthBloc] subscribing to authStateChanges...');
-    _authStateSubscription = getCurrentUserUseCase.authStateChanges.listen(
-      (user) => add(AuthStateChanged(user)),
-      onError: (Object error) {
-        debugPrint('[AuthBloc] authStateChanges stream error: $error');
-      },
-    );
-  }
-
-  void _onAuthStateChanged(
-    AuthStateChanged event,
-    Emitter<AuthState> emit,
-  ) {
-    final user = event.user;
     debugPrint(
-      '[AuthBloc] authStateChanged -> '
-      '${user != null && user.id.isNotEmpty ? "Authenticated(uid=${user.id})" : "unauth"}',
+      '[AuthBloc] dispatching AuthCheckRequested to subscribe to '
+      'authStateChanges via emit.forEach...',
     );
-    if (user != null && user.id.isNotEmpty) {
-      emit(AuthSuccess(user));
-    } else {
-      emit(const AuthInitial());
-    }
-  }
-
-  @override
-  Future<void> close() async {
-    await _authStateSubscription.cancel();
-    await super.close();
+    add(const AuthCheckRequested());
   }
 
   Future<void> _onAuthCheckRequested(
@@ -77,6 +47,25 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         'staying in $AuthChecking until authStateChanges resolves',
       );
     }
+
+    await emit.forEach(
+      getCurrentUserUseCase.authStateChanges,
+      onData: (authUser) {
+        if (authUser != null && authUser.id.isNotEmpty) {
+          debugPrint(
+            '[AuthBloc] authStateChanges -> '
+            'Authenticated(uid=${authUser.id})',
+          );
+          return AuthSuccess(authUser);
+        }
+        debugPrint('[AuthBloc] authStateChanges -> unauth');
+        return const AuthInitial();
+      },
+      onError: (Object error, StackTrace stackTrace) {
+        debugPrint('[AuthBloc] authStateChanges stream error: $error');
+        return AuthFailure(error.toString());
+      },
+    );
   }
 
   Future<void> _onSignInRequested(
@@ -118,11 +107,24 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     SignOutRequested event,
     Emitter<AuthState> emit,
   ) async {
+    debugPrint('[AuthBloc] SignOutRequested: starting Firebase signOut()...');
     emit(const AuthLoading());
     final result = await signOutUseCase(const NoParams());
+    debugPrint('[AuthBloc] SignOutRequested: Firebase signOut() completed');
     result.fold(
-      (failure) => emit(AuthFailure(failure.message)),
-      (_) => emit(const AuthInitial()),
+      (failure) {
+        debugPrint(
+          '[AuthBloc] SignOutRequested: emitting AuthFailure '
+          '(${failure.message})',
+        );
+        emit(AuthFailure(failure.message));
+      },
+      (_) {
+        debugPrint(
+          '[AuthBloc] SignOutRequested: emitting AuthInitial (unauthenticated)',
+        );
+        emit(const AuthInitial());
+      },
     );
   }
 }
