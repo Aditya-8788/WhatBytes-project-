@@ -20,6 +20,11 @@ class TaskCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final completed = task.isCompleted;
 
+    void handleToggle() {
+      debugPrint('[TaskCard] checkbox onTap fired for taskId="${task.id}"');
+      onToggle();
+    }
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
@@ -44,7 +49,7 @@ class TaskCard extends StatelessWidget {
               children: [
                 GestureDetector(
                   behavior: HitTestBehavior.opaque,
-                  onTap: onToggle,
+                  onTap: handleToggle,
                   child: _CheckCircle(isCompleted: completed),
                 ),
                 const SizedBox(width: 12),

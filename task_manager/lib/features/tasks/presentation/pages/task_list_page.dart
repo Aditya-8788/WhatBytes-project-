@@ -30,9 +30,6 @@ class _TaskListPageState extends State<TaskListPage> {
   @override
   void initState() {
     super.initState();
-    if (widget.userId.isNotEmpty) {
-      context.read<TaskBloc>().add(LoadTasks(userId: widget.userId));
-    }
   }
 
   @override
@@ -376,12 +373,18 @@ class _TaskListPageState extends State<TaskListPage> {
       ),
       child: TaskCard(
         task: task,
-        onToggle: () => context.read<TaskBloc>().add(
-              ToggleTaskComplete(
-                taskId: task.id,
-                isCompleted: task.isCompleted,
-              ),
-            ),
+        onToggle: () {
+          debugPrint(
+            '[TaskListPage] dispatching ToggleTaskComplete '
+            'taskId="${task.id}" new isCompleted=${!task.isCompleted}',
+          );
+          context.read<TaskBloc>().add(
+                ToggleTaskComplete(
+                  taskId: task.id,
+                  isCompleted: !task.isCompleted,
+                ),
+              );
+        },
         onTap: () => _openAddEditTask(task: task),
       ),
     );

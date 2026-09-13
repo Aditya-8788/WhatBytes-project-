@@ -1,4 +1,5 @@
 import 'package:dartz/dartz.dart';
+import 'package:flutter/foundation.dart';
 
 import '../failures/task_failure.dart';
 import '../repositories/task_repository.dart';
@@ -21,6 +22,11 @@ class ToggleCompleteUseCase {
   ToggleCompleteUseCase(this._repository);
 
   Future<Either<TaskFailure, void>> call(ToggleCompleteParams params) {
+    debugPrint(
+      '[ToggleCompleteUseCase] forwarding toggle: '
+      'taskId="${params.taskId}" isCompleted=${params.isCompleted} '
+      'userId="${params.userId}"',
+    );
     return _repository.toggleComplete(
       params.taskId,
       params.isCompleted,

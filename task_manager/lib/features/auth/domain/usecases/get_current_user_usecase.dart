@@ -7,4 +7,6 @@ class GetCurrentUserUseCase {
   GetCurrentUserUseCase(this._repository);
 
   Future<UserEntity?> call() => _repository.getCurrentUser();
+
+  Stream<UserEntity?> get authStateChanges => _repository.authStateChanges;
 }

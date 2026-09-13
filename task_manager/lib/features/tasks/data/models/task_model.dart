@@ -2,6 +2,15 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../../domain/entities/task.dart';
 
+abstract final class TaskFields {
+  static const String userId = 'userId';
+  static const String title = 'title';
+  static const String description = 'description';
+  static const String dueDate = 'dueDate';
+  static const String priority = 'priority';
+  static const String isCompleted = 'isCompleted';
+}
+
 class TaskModel extends TaskEntity {
   const TaskModel({
     required super.id,
@@ -32,13 +41,13 @@ class TaskModel extends TaskEntity {
     }
     return TaskModel(
       id: snapshot.id,
-      title: data['title'] as String,
-      description: data['description'] as String? ?? '',
-      dueDate: (data['dueDate'] as Timestamp?)?.toDate(),
+      title: data[TaskFields.title] as String,
+      description: data[TaskFields.description] as String? ?? '',
+      dueDate: (data[TaskFields.dueDate] as Timestamp?)?.toDate(),
       priority:
-          TaskPriority.values.asNameMap()[data['priority']] ??
+          TaskPriority.values.asNameMap()[data[TaskFields.priority]] ??
           TaskPriority.medium,
-      isCompleted: data['isCompleted'] as bool? ?? false,
+      isCompleted: data[TaskFields.isCompleted] as bool? ?? false,
     );
   }
 
@@ -60,21 +69,21 @@ class TaskModel extends TaskEntity {
   Map<String, dynamic> toJson() {
     return {
       'id': id,
-      'title': title,
-      'description': description,
-      'dueDate': dueDate?.toIso8601String(),
-      'priority': priority.name,
-      'isCompleted': isCompleted,
+      TaskFields.title: title,
+      TaskFields.description: description,
+      TaskFields.dueDate: dueDate?.toIso8601String(),
+      TaskFields.priority: priority.name,
+      TaskFields.isCompleted: isCompleted,
     };
   }
 
   Map<String, dynamic> toFirestore() {
     return {
-      'title': title,
-      'description': description,
-      if (dueDate != null) 'dueDate': Timestamp.fromDate(dueDate!),
-      'priority': priority.name,
-      'isCompleted': isCompleted,
+      TaskFields.title: title,
+      TaskFields.description: description,
+      if (dueDate != null) TaskFields.dueDate: Timestamp.fromDate(dueDate!),
+      TaskFields.priority: priority.name,
+      TaskFields.isCompleted: isCompleted,
     };
   }
 }

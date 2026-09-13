@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../domain/entities/task.dart';
@@ -35,7 +36,7 @@ class TaskBloc extends Bloc<TaskEvent, TasksState> {
   }
 
   String? _userId;
-  StreamSubscription<List<TaskEntity>>? _tasksSubscription;
+  Timer? _initialLoadTimeout;
   List<TaskEntity> _allTasks = const [];
   TasksLoaded? _lastLoaded;
   TaskPriorityFilter _priorityFilter = TaskPriorityFilter.all;
@@ -43,7 +44,7 @@ class TaskBloc extends Bloc<TaskEvent, TasksState> {
 
   @override
   Future<void> close() async {
-    await _tasksSubscription?.cancel();
+    _clearInitialLoadTimeout();
     await super.close();
   }
 
@@ -51,27 +52,50 @@ class TaskBloc extends Bloc<TaskEvent, TasksState> {
     LoadTasks event,
     Emitter<TasksState> emit,
   ) async {
-    _userId = event.userId;
-    await _tasksSubscription?.cancel();
+    final userId = event.userId;
+    if (userId == null || userId.isEmpty) {
+      debugPrint(
+        '[TaskBloc] LoadTasks rejected: '
+        'userId=${userId == null ? "null" : "empty"}',
+      );
+      emit(const TasksError('Not authenticated'));
+      return;
+    }
+    debugPrint('[TaskBloc] LoadTasks: loading tasks for userId="$userId"');
+    _userId = userId;
+    _clearInitialLoadTimeout();
     emit(const TasksLoading());
 
-    _tasksSubscription = getTasksUseCase(
-      GetTasksParams(userId: event.userId),
-    ).listen(
-      (tasks) {
+    _initialLoadTimeout = Timer(const Duration(seconds: 10), () {
+      _initialLoadTimeout = null;
+      emit(const TasksError('Failed to load tasks — timeout'));
+    });
+
+    await emit.forEach(
+      getTasksUseCase(GetTasksParams(userId: userId)),
+      onData: (tasks) {
+        _clearInitialLoadTimeout();
         _allTasks = List.unmodifiable(tasks);
-        _lastLoaded = TasksLoaded(
+        final loaded = TasksLoaded(
           allTasks: _allTasks,
           filteredTasks: _applyFilters(_allTasks),
           priorityFilter: _priorityFilter,
           statusFilter: _statusFilter,
         );
-        emit(_lastLoaded!);
+        _lastLoaded = loaded;
+        return loaded;
       },
-      onError: (Object error) {
-        emit(const TasksError('Failed to load tasks. Please try again.'));
+      onError: (error, stackTrace) {
+        _clearInitialLoadTimeout();
+        return TasksError(error.toString());
       },
     );
+    _clearInitialLoadTimeout();
+  }
+
+  void _clearInitialLoadTimeout() {
+    _initialLoadTimeout?.cancel();
+    _initialLoadTimeout = null;
   }
 
   Future<void> _onAddTask(AddTask event, Emitter<TasksState> emit) async {
@@ -125,8 +149,13 @@ class TaskBloc extends Bloc<TaskEvent, TasksState> {
   ) async {
     final userId = _userId;
     if (userId == null) {
+      debugPrint('[TaskBloc] ToggleTaskComplete skipped: no userId');
       return;
     }
+    debugPrint(
+      '[TaskBloc] ToggleTaskComplete: taskId="${event.taskId}" '
+      'isCompleted=${event.isCompleted}',
+    );
     final result = await toggleCompleteUseCase(
       ToggleCompleteParams(
         taskId: event.taskId,
@@ -136,7 +165,10 @@ class TaskBloc extends Bloc<TaskEvent, TasksState> {
     );
     result.fold(
       (failure) => _emitFailure(emit, failure.message),
-      (_) {},
+      (_) => debugPrint(
+        '[TaskBloc] ToggleTaskComplete persisted: '
+        'taskId="${event.taskId}"',
+      ),
     );
   }
 

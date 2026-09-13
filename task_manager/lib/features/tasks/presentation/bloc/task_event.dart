@@ -11,7 +11,7 @@ sealed class TaskEvent extends Equatable {
 }
 
 class LoadTasks extends TaskEvent {
-  final String userId;
+  final String? userId;
 
   const LoadTasks({required this.userId});
 

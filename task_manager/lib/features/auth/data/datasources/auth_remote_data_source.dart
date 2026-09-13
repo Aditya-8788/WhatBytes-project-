@@ -1,4 +1,5 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 
 import '../models/user_model.dart';
 
@@ -43,5 +44,15 @@ class AuthRemoteDataSource {
   Future<UserModel?> getCurrentUser() async {
     final user = _firebaseAuth.currentUser;
     return user == null ? null : UserModel.fromFirebaseUser(user);
+  }
+
+  Stream<UserModel?> get authStateChanges {
+    return _firebaseAuth.authStateChanges().map((user) {
+      debugPrint(
+        '[AuthDataSource] authStateChanges fired: '
+        '${user != null ? "uid=${user.uid}" : "signed out (null)"}',
+      );
+      return user == null ? null : UserModel.fromFirebaseUser(user);
+    });
   }
 }

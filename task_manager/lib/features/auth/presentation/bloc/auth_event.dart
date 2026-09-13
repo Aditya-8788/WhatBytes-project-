@@ -1,5 +1,7 @@
 import 'package:equatable/equatable.dart';
 
+import '../../domain/entities/user.dart';
+
 sealed class AuthEvent extends Equatable {
   const AuthEvent();
 
@@ -9,6 +11,15 @@ sealed class AuthEvent extends Equatable {
 
 class AuthCheckRequested extends AuthEvent {
   const AuthCheckRequested();
+}
+
+class AuthStateChanged extends AuthEvent {
+  final UserEntity? user;
+
+  const AuthStateChanged(this.user);
+
+  @override
+  List<Object?> get props => [user];
 }
 
 class SignUpRequested extends AuthEvent {

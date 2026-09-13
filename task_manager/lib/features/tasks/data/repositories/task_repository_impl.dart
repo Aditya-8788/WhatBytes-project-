@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:dartz/dartz.dart';
+import 'package:flutter/foundation.dart';
 
 import '../../domain/entities/task.dart';
 import '../../domain/failures/task_failure.dart';
@@ -14,7 +15,22 @@ class TaskRepositoryImpl implements TaskRepository {
 
   @override
   Stream<List<TaskEntity>> getTasks(String userId) {
-    return _remoteDataSource.getTasks(userId);
+    debugPrint(
+      '[TaskRepository] getTasks: READ query filters '
+      '${TaskFields.userId} == "$userId"',
+    );
+    Stream<List<TaskEntity>> watch() async* {
+      debugPrint('[TaskRepository] tasks stream connected for userId="$userId"');
+      yield* _remoteDataSource.getTasks(userId).map((tasks) {
+        debugPrint(
+          '[TaskRepository] snapshot received: ${tasks.length} doc(s) '
+          'for userId="$userId"',
+        );
+        return tasks;
+      });
+    }
+
+    return watch();
   }
 
   @override
@@ -22,6 +38,10 @@ class TaskRepositoryImpl implements TaskRepository {
     TaskEntity task,
     String userId,
   ) async {
+    debugPrint(
+      '[TaskRepository] createTask: WRITE sets ${TaskFields.userId}='
+      '"$userId" (matches READ filter ${TaskFields.userId} == "$userId")',
+    );
     try {
       await _remoteDataSource.createTask(TaskModel.fromEntity(task), userId);
       return const Right(null);
@@ -62,6 +82,10 @@ class TaskRepositoryImpl implements TaskRepository {
     bool isCompleted,
     String userId,
   ) async {
+    debugPrint(
+      '[TaskRepositoryImpl] toggleComplete: taskId="$taskId" '
+      'writing isCompleted=$isCompleted userId="$userId"',
+    );
     try {
       await _remoteDataSource.toggleComplete(taskId, isCompleted, userId);
       return const Right(null);

@@ -61,6 +61,10 @@ class AuthRepositoryImpl implements AuthRepository {
     return user;
   }
 
+  @override
+  Stream<UserEntity?> get authStateChanges =>
+      _remoteDataSource.authStateChanges;
+
   AuthFailure _mapAuthExceptionToFailure(FirebaseAuthException e) {
     switch (e.code) {
       case 'wrong-password':

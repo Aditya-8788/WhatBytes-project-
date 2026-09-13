@@ -1,5 +1,9 @@
+import 'dart:async';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../domain/entities/user.dart';
 import '../../domain/usecases/get_current_user_usecase.dart';
 import '../../domain/usecases/sign_in_usecase.dart';
 import '../../domain/usecases/sign_out_usecase.dart';
@@ -14,16 +18,49 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   final SignOutUseCase signOutUseCase;
   final GetCurrentUserUseCase getCurrentUserUseCase;
 
+  late final StreamSubscription<UserEntity?> _authStateSubscription;
+
   AuthBloc({
     required this.signInUseCase,
     required this.signUpUseCase,
     required this.signOutUseCase,
     required this.getCurrentUserUseCase,
-  }) : super(const AuthInitial()) {
+  }) : super(const AuthChecking()) {
     on<AuthCheckRequested>(_onAuthCheckRequested);
+    on<AuthStateChanged>(_onAuthStateChanged);
     on<SignInRequested>(_onSignInRequested);
     on<SignUpRequested>(_onSignUpRequested);
     on<SignOutRequested>(_onSignOutRequested);
+
+    debugPrint('[AuthBloc] subscribing to authStateChanges...');
+    _authStateSubscription = getCurrentUserUseCase.authStateChanges.listen(
+      (user) => add(AuthStateChanged(user)),
+      onError: (Object error) {
+        debugPrint('[AuthBloc] authStateChanges stream error: $error');
+      },
+    );
+  }
+
+  void _onAuthStateChanged(
+    AuthStateChanged event,
+    Emitter<AuthState> emit,
+  ) {
+    final user = event.user;
+    debugPrint(
+      '[AuthBloc] authStateChanged -> '
+      '${user != null && user.id.isNotEmpty ? "Authenticated(uid=${user.id})" : "unauth"}',
+    );
+    if (user != null && user.id.isNotEmpty) {
+      emit(AuthSuccess(user));
+    } else {
+      emit(const AuthInitial());
+    }
+  }
+
+  @override
+  Future<void> close() async {
+    await _authStateSubscription.cancel();
+    await super.close();
   }
 
   Future<void> _onAuthCheckRequested(
@@ -31,10 +68,14 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     Emitter<AuthState> emit,
   ) async {
     final user = await getCurrentUserUseCase();
-    if (user != null) {
+    if (user != null && user.id.isNotEmpty) {
+      debugPrint('[AuthBloc] AuthCheckRequested: user found uid=${user.id}');
       emit(AuthSuccess(user));
     } else {
-      emit(const AuthInitial());
+      debugPrint(
+        '[AuthBloc] AuthCheckRequested: no cached user, '
+        'staying in $AuthChecking until authStateChanges resolves',
+      );
     }
   }
 
